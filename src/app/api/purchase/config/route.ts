@@ -27,14 +27,25 @@ export async function GET(req: NextRequest) {
       take: 20,
     });
 
+    const razorpayKeyId = process.env.RAZORPAY_KEY_ID || "";
+    const razorpayKeySecret = process.env.RAZORPAY_KEY_SECRET || "";
+    const isRazorpayConfigured = Boolean(
+      razorpayKeyId &&
+      razorpayKeySecret &&
+      !razorpayKeyId.includes("demo123456789")
+    );
+
     return NextResponse.json({
       isMaintenance,
       exchangeRate: rate,
       minCoins: 10,
+      razorpayEnabled: settings?.razorpayEnabled ?? true,
+      manualPaymentEnabled: settings?.manualPaymentEnabled ?? true,
+      isRazorpayConfigured,
       manualPaymentUrl: settings?.manualPaymentUrl || "https://pay.example.com/upi",
       manualPaymentInstructions:
         settings?.manualPaymentInstructions || "Pay the exact amount and enter your 12-digit UTR.",
-      razorpayKeyId: process.env.RAZORPAY_KEY_ID || "rzp_test_demo123456789",
+      razorpayKeyId: isRazorpayConfigured ? razorpayKeyId : "",
       history,
     });
   } catch (error) {

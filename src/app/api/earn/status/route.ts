@@ -60,6 +60,8 @@ export async function GET(req: NextRequest) {
       timezone: settings?.timezone || "Asia/Kolkata",
       todayDate,
       userBalance: auth.user.coinBalance,
+      afkEarningEnabled: settings?.afkEarningEnabled ?? true,
+      linkEarningEnabled: settings?.linkEarningEnabled ?? true,
       link: {
         rewardPerLink: settings?.linkRewardCoins || 2,
         dailyMax: linkDailyMax,

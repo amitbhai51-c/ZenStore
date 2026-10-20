@@ -2,6 +2,41 @@ import React from "react";
 import { Gamepad2, Gift, Sparkles, Trophy, ShoppingBag, ShieldCheck } from "lucide-react";
 
 export function ProductIcon({ type, className = "w-12 h-12" }: { type: string; className?: string }) {
+  if (!type) {
+    return (
+      <div className={`flex items-center justify-center rounded-xl bg-zinc-900 border border-zinc-700/50 p-2 shadow-lg text-amber-400 ${className}`}>
+        <Gift className="w-6 h-6" />
+      </div>
+    );
+  }
+
+  // Handle uploaded images (Base64 data URLs, relative paths, or remote URLs)
+  if (type.startsWith("data:image/") || type.startsWith("http://") || type.startsWith("https://") || type.startsWith("/")) {
+    return (
+      <div className={`relative flex items-center justify-center rounded-xl bg-[#0e121e] border border-[#222b40] p-1.5 overflow-hidden shadow-lg ${className}`}>
+        <img
+          src={type}
+          alt="Product logo"
+          className="w-full h-full object-contain rounded-lg"
+          onError={(e) => {
+            // Fallback if image fails to load
+            (e.target as HTMLElement).style.display = "none";
+          }}
+        />
+      </div>
+    );
+  }
+
+  // Handle raw SVG markup if pasted or stored
+  if (type.trim().startsWith("<svg")) {
+    return (
+      <div
+        className={`relative flex items-center justify-center rounded-xl bg-[#0e121e] border border-[#222b40] p-1.5 overflow-hidden shadow-lg ${className}`}
+        dangerouslySetInnerHTML={{ __html: type }}
+      />
+    );
+  }
+
   const norm = type.toLowerCase();
 
   if (norm.includes("minecraft")) {

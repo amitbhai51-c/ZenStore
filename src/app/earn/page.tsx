@@ -350,95 +350,111 @@ export default function EarnPage() {
                 Earn 1 coin per minute automatically. Keep this tab running in your browser while doing other work.
               </p>
 
-              {/* Progress Bar towards daily limit */}
-              <div className="mb-6 p-4 rounded-xl bg-[#121624] border border-[#1e2538]">
-                <div className="flex justify-between text-xs mb-2">
-                  <span className="text-zinc-400">Today&apos;s AFK Progress:</span>
-                  <span className="text-amber-400 font-bold">
-                    {afkDailyEarned} / {data?.afk?.dailyMax || 20} coins
-                  </span>
+              {data?.afkEarningEnabled === false ? (
+                <div className="py-10 px-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-center my-4">
+                  <AlertCircle className="w-8 h-8 text-amber-400 mx-auto mb-2" />
+                  <h3 className="text-sm font-bold text-white mb-1">AFK Earning Disabled</h3>
+                  <p className="text-xs text-zinc-400">
+                    The store administrator has temporarily disabled AFK idle earning. Please try link tasks.
+                  </p>
                 </div>
-                <div className="w-full h-2 rounded-full bg-[#1b2134] overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-emerald-500 to-amber-400 transition-all duration-500"
-                    style={{
-                      width: `${Math.min(
-                        100,
-                        (afkDailyEarned / (data?.afk?.dailyMax || 20)) * 100
-                      )}%`,
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* Live Timer & Heartbeat Display */}
-              <div className="p-6 rounded-2xl bg-[#101422] border border-[#20273c] text-center mb-6">
-                <div className="flex items-center justify-center gap-2 text-xs text-zinc-400 mb-2">
-                  <Clock className="w-4 h-4 text-emerald-400" />
-                  <span>Session Elapsed Time</span>
-                </div>
-                <div className="text-5xl font-mono font-black text-white tracking-widest mb-3">
-                  {formatTimer(afkSeconds)}
-                </div>
-
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-bold mb-4">
-                  <Coins className="w-3.5 h-3.5" />
-                  <span>+{afkSessionCoins} coins earned this session</span>
-                </div>
-
-                {/* Heartbeat progress circle / bar */}
-                {afkActive && (
-                  <div className="mt-2 text-xs text-zinc-400">
-                    <div className="flex justify-between text-[11px] mb-1">
-                      <span>Next Coin Heartbeat:</span>
-                      <span>{60 - afkHeartbeatProgress}s</span>
+              ) : (
+                <>
+                  {/* Progress Bar towards daily limit */}
+                  <div className="mb-6 p-4 rounded-xl bg-[#121624] border border-[#1e2538]">
+                    <div className="flex justify-between text-xs mb-2">
+                      <span className="text-zinc-400">Today&apos;s AFK Progress:</span>
+                      <span className="text-amber-400 font-bold">
+                        {afkDailyEarned} / {data?.afk?.dailyMax || 20} coins
+                      </span>
                     </div>
-                    <div className="w-full h-1.5 rounded-full bg-[#1c2236] overflow-hidden">
+                    <div className="w-full h-2 rounded-full bg-[#1b2134] overflow-hidden">
                       <div
-                        className="h-full bg-emerald-400 transition-all duration-1000"
-                        style={{ width: `${(afkHeartbeatProgress / 60) * 100}%` }}
+                        className="h-full bg-gradient-to-r from-emerald-500 to-amber-400 transition-all duration-500"
+                        style={{
+                          width: `${Math.min(
+                            100,
+                            (afkDailyEarned / (data?.afk?.dailyMax || 20)) * 100
+                          )}%`,
+                        }}
                       />
                     </div>
                   </div>
-                )}
-              </div>
+
+                  {/* Live Timer & Heartbeat Display */}
+                  <div className="p-6 rounded-2xl bg-[#101422] border border-[#20273c] text-center mb-6">
+                    <div className="flex items-center justify-center gap-2 text-xs text-zinc-400 mb-2">
+                      <Clock className="w-4 h-4 text-emerald-400" />
+                      <span>Session Elapsed Time</span>
+                    </div>
+                    <div className="text-5xl font-mono font-black text-white tracking-widest mb-3">
+                      {formatTimer(afkSeconds)}
+                    </div>
+
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-bold mb-4">
+                      <Coins className="w-3.5 h-3.5" />
+                      <span>+{afkSessionCoins} coins earned this session</span>
+                    </div>
+
+                    {/* Heartbeat progress circle / bar */}
+                    {afkActive && (
+                      <div className="mt-2 text-xs text-zinc-400">
+                        <div className="flex justify-between text-[11px] mb-1">
+                          <span>Next Coin Heartbeat:</span>
+                          <span>{60 - afkHeartbeatProgress}s</span>
+                        </div>
+                        <div className="w-full h-1.5 rounded-full bg-[#1c2236] overflow-hidden">
+                          <div
+                            className="h-full bg-emerald-400 transition-all duration-1000"
+                            style={{ width: `${(afkHeartbeatProgress / 60) * 100}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
 
             {/* AFK Controls */}
             <div>
-              {!afkActive ? (
-                <button
-                  onClick={handleStartAfk}
-                  disabled={afkRemaining <= 0 || data?.isMaintenance}
-                  className="w-full py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-all hover:scale-[1.01] disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <Play className="w-4 h-4 fill-black" />
-                  <span>Start AFK Earning</span>
-                </button>
-              ) : (
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    onClick={handlePauseAfk}
-                    className="py-3 rounded-xl bg-[#181d2e] hover:bg-[#22283d] text-zinc-200 border border-[#28324d] font-bold text-xs flex items-center justify-center gap-2"
-                  >
-                    {afkPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
-                    <span>{afkPaused ? "Resume" : "Pause"}</span>
-                  </button>
+              {data?.afkEarningEnabled !== false && (
+                <>
+                  {!afkActive ? (
+                    <button
+                      onClick={handleStartAfk}
+                      disabled={afkRemaining <= 0 || data?.isMaintenance}
+                      className="w-full py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-all hover:scale-[1.01] disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <Play className="w-4 h-4 fill-black" />
+                      <span>Start AFK Earning</span>
+                    </button>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        onClick={handlePauseAfk}
+                        className="py-3 rounded-xl bg-[#181d2e] hover:bg-[#22283d] text-zinc-200 border border-[#28324d] font-bold text-xs flex items-center justify-center gap-2"
+                      >
+                        {afkPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+                        <span>{afkPaused ? "Resume" : "Pause"}</span>
+                      </button>
 
-                  <button
-                    onClick={handleStopAfk}
-                    className="py-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 font-bold text-xs flex items-center justify-center gap-2"
-                  >
-                    <Square className="w-4 h-4 fill-red-400" />
-                    <span>Stop & Save</span>
-                  </button>
-                </div>
+                      <button
+                        onClick={handleStopAfk}
+                        className="py-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 font-bold text-xs flex items-center justify-center gap-2"
+                      >
+                        <Square className="w-4 h-4 fill-red-400" />
+                        <span>Stop & Save</span>
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="mt-4 flex items-center gap-2 text-[11px] text-zinc-400 justify-center">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Anti-tamper server heartbeats active</span>
+                  </div>
+                </>
               )}
-
-              <div className="mt-4 flex items-center gap-2 text-[11px] text-zinc-400 justify-center">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Anti-tamper server heartbeats active</span>
-              </div>
             </div>
           </div>
         </div>
@@ -463,94 +479,106 @@ export default function EarnPage() {
               Complete partner tasks to earn {data?.link?.rewardPerLink || 2} coins each. Click a task to open the link in a new tab, wait 15 seconds, and claim your coins.
             </p>
 
-            {/* Active Challenge Drawer */}
-            {activeTaskSession && (
-              <div className="mb-6 p-5 rounded-2xl bg-[#141a2a] border border-amber-500/40 animate-slide-up">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">
-                    Task in Progress
-                  </span>
-                  <span className="text-xs font-mono font-bold text-white">
-                    {activeTaskSession.secondsLeft > 0
-                      ? `${activeTaskSession.secondsLeft}s left`
-                      : "Challenge Complete!"}
-                  </span>
-                </div>
-
-                <p className="text-sm font-bold text-white mb-1">{activeTaskSession.title}</p>
-                <p className="text-xs text-zinc-400 mb-4">
-                  Please keep the partner page open until the timer completes.
+            {data?.linkEarningEnabled === false ? (
+              <div className="py-12 px-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-center my-auto">
+                <AlertCircle className="w-8 h-8 text-amber-400 mx-auto mb-2" />
+                <h3 className="text-sm font-bold text-white mb-1">Link Tasks Disabled</h3>
+                <p className="text-xs text-zinc-400">
+                  The store administrator has temporarily disabled link unlock tasks. Please check back later.
                 </p>
-
-                <div className="w-full h-2 rounded-full bg-[#1b2238] overflow-hidden mb-4">
-                  <div
-                    className="h-full bg-amber-400 transition-all duration-1000"
-                    style={{
-                      width: `${((15 - activeTaskSession.secondsLeft) / 15) * 100}%`,
-                    }}
-                  />
-                </div>
-
-                <div className="flex items-center justify-end gap-3">
-                  <button
-                    onClick={() => setActiveTaskSession(null)}
-                    className="px-3 py-1.5 rounded-lg text-xs text-zinc-400 hover:text-white"
-                  >
-                    Cancel
-                  </button>
-
-                  <button
-                    onClick={handleClaimTask}
-                    disabled={!activeTaskSession.readyToClaim || claimingTask}
-                    className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs flex items-center gap-1.5 shadow-md shadow-amber-500/20 disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    {claimingTask ? (
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                    )}
-                    <span>Claim +{activeTaskSession.rewardCoins} Coins</span>
-                  </button>
-                </div>
               </div>
-            )}
-
-            {/* Tasks List */}
-            <div className="space-y-3 flex-1">
-              {data?.link?.tasks?.map((task: EarningTask) => (
-                <div
-                  key={task.id}
-                  className="p-4 rounded-xl bg-[#111420] border border-[#1e2538] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
-                >
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <p className="text-sm font-bold text-white">{task.title}</p>
-                      {task.isCompletedToday && (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                          Completed Today
-                        </span>
-                      )}
+            ) : (
+              <>
+                {/* Active Challenge Drawer */}
+                {activeTaskSession && (
+                  <div className="mb-6 p-5 rounded-2xl bg-[#141a2a] border border-amber-500/40 animate-slide-up">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">
+                        Task in Progress
+                      </span>
+                      <span className="text-xs font-mono font-bold text-white">
+                        {activeTaskSession.secondsLeft > 0
+                          ? `${activeTaskSession.secondsLeft}s left`
+                          : "Challenge Complete!"}
+                      </span>
                     </div>
-                    <p className="text-xs text-zinc-400 line-clamp-1">{task.description}</p>
+
+                    <p className="text-sm font-bold text-white mb-1">{activeTaskSession.title}</p>
+                    <p className="text-xs text-zinc-400 mb-4">
+                      Please keep the partner page open until the timer completes.
+                    </p>
+
+                    <div className="w-full h-2 rounded-full bg-[#1b2238] overflow-hidden mb-4">
+                      <div
+                        className="h-full bg-amber-400 transition-all duration-1000"
+                        style={{
+                          width: `${((15 - activeTaskSession.secondsLeft) / 15) * 100}%`,
+                        }}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-end gap-3">
+                      <button
+                        onClick={() => setActiveTaskSession(null)}
+                        className="px-3 py-1.5 rounded-lg text-xs text-zinc-400 hover:text-white"
+                      >
+                        Cancel
+                      </button>
+
+                      <button
+                        onClick={handleClaimTask}
+                        disabled={!activeTaskSession.readyToClaim || claimingTask}
+                        className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs flex items-center gap-1.5 shadow-md shadow-amber-500/20 disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        {claimingTask ? (
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                        )}
+                        <span>Claim +{activeTaskSession.rewardCoins} Coins</span>
+                      </button>
+                    </div>
                   </div>
+                )}
 
-                  <div className="flex items-center gap-3 shrink-0 self-end sm:self-auto">
-                    <span className="text-xs font-bold text-amber-400 flex items-center gap-1">
-                      <Coins className="w-3.5 h-3.5" />+{task.rewardCoins}
-                    </span>
-
-                    <button
-                      onClick={() => handleStartTask(task)}
-                      disabled={task.isCompletedToday || data?.isMaintenance}
-                      className="px-3.5 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-xs font-bold flex items-center gap-1.5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                {/* Tasks List */}
+                <div className="space-y-3 flex-1">
+                  {data?.link?.tasks?.map((task: EarningTask) => (
+                    <div
+                      key={task.id}
+                      className="p-4 rounded-xl bg-[#111420] border border-[#1e2538] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
                     >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      <span>{task.isCompletedToday ? "Claimed" : "Open & Earn"}</span>
-                    </button>
-                  </div>
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="text-sm font-bold text-white">{task.title}</p>
+                          {task.isCompletedToday && (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                              Completed Today
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-zinc-400 line-clamp-1">{task.description}</p>
+                      </div>
+
+                      <div className="flex items-center gap-3 shrink-0 self-end sm:self-auto">
+                        <span className="text-xs font-bold text-amber-400 flex items-center gap-1">
+                          <Coins className="w-3.5 h-3.5" />+{task.rewardCoins}
+                        </span>
+
+                        <button
+                          onClick={() => handleStartTask(task)}
+                          disabled={task.isCompletedToday || data?.isMaintenance}
+                          className="px-3.5 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-xs font-bold flex items-center gap-1.5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          <span>{task.isCompletedToday ? "Claimed" : "Open & Earn"}</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </>
+            )}
 
             {/* Verification explanation alert */}
             <div className="mt-6 p-4 rounded-xl bg-[#0c0f18] border border-[#181d2a] flex items-start gap-3 text-xs text-zinc-400">

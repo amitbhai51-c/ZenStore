@@ -22,6 +22,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (settings?.razorpayEnabled === false) {
+      return NextResponse.json(
+        { error: "Razorpay online payments are currently disabled by the administrator. Please use Manual UPI / QR payment." },
+        { status: 403 }
+      );
+    }
+
     const { coins } = await req.json();
     const coinQty = parseInt(coins, 10);
 
@@ -71,7 +78,6 @@ export async function POST(req: NextRequest) {
       amountInr: (amountInrPaise / 100).toFixed(2),
       coins: coinQty,
       currency: "INR",
-      isSimulated: razorpayOrder.isSimulated,
     });
   } catch (error: any) {
     console.error("Razorpay order creation error:", error);

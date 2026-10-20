@@ -26,6 +26,8 @@ import {
   RefreshCw,
   Send,
   Ticket,
+  Upload,
+  ExternalLink,
 } from "lucide-react";
 
 type AdminTab =
@@ -35,6 +37,7 @@ type AdminTab =
   | "orders"
   | "payments"
   | "redeem-codes"
+  | "tasks"
   | "settings"
   | "maintenance"
   | "smtp"
@@ -57,6 +60,7 @@ export default function AdminPortalPage() {
   const [ordersList, setOrdersList] = useState<any[]>([]);
   const [paymentsList, setPaymentsList] = useState<any[]>([]);
   const [redeemCodesList, setRedeemCodesList] = useState<any[]>([]);
+  const [tasksList, setTasksList] = useState<any[]>([]);
   const [settingsData, setSettingsData] = useState<any>(null);
   const [smtpData, setSmtpData] = useState<any>(null);
   const [templatesList, setTemplatesList] = useState<any[]>([]);
@@ -73,6 +77,17 @@ export default function AdminPortalPage() {
 
   const [suspendModal, setSuspendModal] = useState<{ userId: string; username: string; isSuspended: boolean } | null>(null);
   const [suspendReason, setSuspendReason] = useState("");
+
+  // Delete User Confirmation Modal
+  const [deleteUserModal, setDeleteUserModal] = useState<{
+    id: string;
+    username: string;
+    email: string;
+    role: string;
+  } | null>(null);
+
+  // Earning Task Modal
+  const [taskModal, setTaskModal] = useState<any | null>(null);
 
   const [productModal, setProductModal] = useState<any | null>(null);
 
@@ -139,6 +154,12 @@ export default function AdminPortalPage() {
         if (res.ok) {
           const json = await res.json();
           setRedeemCodesList(json.codes || []);
+        }
+      } else if (tab === "tasks") {
+        const res = await fetch("/api/admin/tasks");
+        if (res.ok) {
+          const json = await res.json();
+          setTasksList(json.tasks || []);
         }
       } else if (tab === "settings" || tab === "maintenance") {
         const res = await fetch("/api/admin/settings");
@@ -271,6 +292,83 @@ export default function AdminPortalPage() {
       }
     } catch {
       setError("Failed to archive product");
+    }
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    try {
+      const res = await fetch(`/api/admin/users?id=${userId}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Failed to delete user");
+      } else {
+        setMessage(data.message || "User account deleted permanently.");
+        setDeleteUserModal(null);
+        loadTabData("users");
+      }
+    } catch {
+      setError("Network error while deleting user");
+    }
+  };
+
+  const handleToggleTaskActive = async (taskId: string, currentStatus: boolean) => {
+    try {
+      const res = await fetch(`/api/admin/tasks/${taskId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive: !currentStatus }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Failed to update task status");
+      } else {
+        setMessage(`Task status updated to ${!currentStatus ? "ACTIVE" : "DISABLED"}`);
+        loadTabData("tasks");
+      }
+    } catch {
+      setError("Network error updating task");
+    }
+  };
+
+  const handleDeleteTask = async (taskId: string) => {
+    if (!confirm("Are you sure you want to delete this earning task?")) return;
+    try {
+      const res = await fetch(`/api/admin/tasks/${taskId}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Failed to delete task");
+      } else {
+        setMessage("Task deleted successfully");
+        loadTabData("tasks");
+      }
+    } catch {
+      setError("Network error deleting task");
+    }
+  };
+
+  const handleSaveTask = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!taskModal) return;
+    try {
+      const isEdit = Boolean(taskModal.id);
+      const url = isEdit ? `/api/admin/tasks/${taskModal.id}` : "/api/admin/tasks";
+      const method = isEdit ? "PATCH" : "POST";
+
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(taskModal),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Failed to save task");
+      } else {
+        setMessage(isEdit ? "Task updated!" : "Task created successfully!");
+        setTaskModal(null);
+        loadTabData("tasks");
+      }
+    } catch {
+      setError("Network error saving task");
     }
   };
 
@@ -547,6 +645,7 @@ export default function AdminPortalPage() {
           { id: "orders", label: "Orders & Fulfillment", icon: Package },
           { id: "payments", label: "Manual Payments", icon: CreditCard },
           { id: "redeem-codes", label: "Redeem Codes", icon: Ticket },
+          { id: "tasks", label: "Earning Tasks", icon: Coins },
           { id: "settings", label: "Website Info", icon: Settings },
           { id: "maintenance", label: "Maintenance Controls", icon: ToggleLeft },
           { id: "smtp", label: "SMTP Mailer", icon: Mail },
@@ -804,6 +903,23 @@ export default function AdminPortalPage() {
                           }`}
                         >
                           {u.isSuspended ? "Unsuspend" : "Suspend"}
+                        </button>
+                      )}
+
+                      {u.id !== user?.id && (
+                        <button
+                          onClick={() =>
+                            setDeleteUserModal({
+                              id: u.id,
+                              username: u.username,
+                              email: u.email,
+                              role: u.role,
+                            })
+                          }
+                          className="px-2.5 py-1 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/40 font-semibold text-[11px] inline-flex items-center gap-1 transition-colors"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>Delete</span>
                         </button>
                       )}
                     </td>
@@ -1225,6 +1341,99 @@ export default function AdminPortalPage() {
         </div>
       )}
 
+      {/* ======================= TAB: EARNING TASKS ======================= */}
+      {activeTab === "tasks" && (
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+                Earning Tasks Management ({tasksList.length})
+              </h3>
+              <p className="text-xs text-zinc-400 mt-0.5">
+                Enable, disable, or create individual link-unlock earning tasks. Users complete these to earn free coins.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setTaskModal({
+                  title: "",
+                  description: "",
+                  linkUrl: "https://",
+                  rewardCoins: 2,
+                  isActive: true,
+                });
+              }}
+              className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs flex items-center gap-1.5 shadow-md shadow-amber-500/20"
+            >
+              <Plus className="w-4 h-4" />
+              Create Earning Task
+            </button>
+          </div>
+
+          <div className="overflow-x-auto rounded-2xl border border-[#1c2234]">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-[#0e121c] text-zinc-400 border-b border-[#1c2234]">
+                <tr>
+                  <th className="p-3.5">Task Title</th>
+                  <th className="p-3.5">Link URL</th>
+                  <th className="p-3.5">Reward</th>
+                  <th className="p-3.5">Completions</th>
+                  <th className="p-3.5">Status</th>
+                  <th className="p-3.5 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#171d2c] bg-[#090b12]">
+                {tasksList.map((t) => (
+                  <tr key={t.id} className="hover:bg-[#0e121d] transition-colors">
+                    <td className="p-3.5">
+                      <p className="font-bold text-white">{t.title}</p>
+                      <p className="text-zinc-500 text-[11px] line-clamp-1">{t.description}</p>
+                    </td>
+                    <td className="p-3.5 font-mono text-zinc-400 max-w-xs truncate">
+                      <a href={t.linkUrl} target="_blank" rel="noreferrer" className="text-sky-400 hover:underline flex items-center gap-1">
+                        <span className="truncate">{t.linkUrl}</span>
+                        <ExternalLink className="w-3 h-3 shrink-0" />
+                      </a>
+                    </td>
+                    <td className="p-3.5 font-bold text-amber-400">+{t.rewardCoins} coins</td>
+                    <td className="p-3.5 text-zinc-300 font-semibold">{t._count?.completions ?? 0}</td>
+                    <td className="p-3.5">
+                      <span
+                        className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
+                          t.isActive
+                            ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                            : "bg-red-500/10 text-red-400 border border-red-500/20"
+                        }`}
+                      >
+                        {t.isActive ? "ACTIVE" : "DISABLED"}
+                      </span>
+                    </td>
+                    <td className="p-3.5 text-right space-x-2">
+                      <button
+                        onClick={() => handleToggleTaskActive(t.id, t.isActive)}
+                        className={`px-2.5 py-1 rounded-lg border font-semibold text-[11px] transition-colors ${
+                          t.isActive
+                            ? "bg-red-500/10 text-red-400 border-red-500/30 hover:bg-red-500/20"
+                            : "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20"
+                        }`}
+                      >
+                        {t.isActive ? "Disable Task" : "Enable Task"}
+                      </button>
+                      <button
+                        onClick={() => handleDeleteTask(t.id)}
+                        className="px-2.5 py-1 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 font-semibold text-[11px]"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 inline" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* ======================= TAB: WEBSITE SETTINGS ======================= */}
       {activeTab === "settings" && settingsData && (
         <div className="p-6 rounded-2xl bg-[#0d101a] border border-[#1c2234] max-w-3xl">
@@ -1351,6 +1560,92 @@ export default function AdminPortalPage() {
               >
                 {settingsData.purchaseMaintenance ? "MAINTENANCE ON" : "ACTIVE"}
               </button>
+            </div>
+
+            <h4 className="font-bold text-white pt-2 text-sm">Individual Payment Gateways</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="p-4 rounded-xl bg-[#121624] border border-[#1e2538] flex items-center justify-between">
+                <div>
+                  <p className="font-bold text-white text-sm">Razorpay Online Gateway</p>
+                  <p className="text-zinc-400">Cards, NetBanking, Instant UPI</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSettingsData({ ...settingsData, razorpayEnabled: !(settingsData.razorpayEnabled ?? true) })
+                  }
+                  className={`px-3 py-1.5 rounded-xl font-bold text-xs ${
+                    settingsData.razorpayEnabled ?? true
+                      ? "bg-emerald-500 text-black"
+                      : "bg-red-500/20 text-red-400 border border-red-500/40"
+                  }`}
+                >
+                  {(settingsData.razorpayEnabled ?? true) ? "ENABLED" : "DISABLED"}
+                </button>
+              </div>
+
+              <div className="p-4 rounded-xl bg-[#121624] border border-[#1e2538] flex items-center justify-between">
+                <div>
+                  <p className="font-bold text-white text-sm">Manual UPI / QR Gateway</p>
+                  <p className="text-zinc-400">Direct QR code and UTR verification</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSettingsData({ ...settingsData, manualPaymentEnabled: !(settingsData.manualPaymentEnabled ?? true) })
+                  }
+                  className={`px-3 py-1.5 rounded-xl font-bold text-xs ${
+                    settingsData.manualPaymentEnabled ?? true
+                      ? "bg-emerald-500 text-black"
+                      : "bg-red-500/20 text-red-400 border border-red-500/40"
+                  }`}
+                >
+                  {(settingsData.manualPaymentEnabled ?? true) ? "ENABLED" : "DISABLED"}
+                </button>
+              </div>
+            </div>
+
+            <h4 className="font-bold text-white pt-2 text-sm">Individual Earning Methods</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="p-4 rounded-xl bg-[#121624] border border-[#1e2538] flex items-center justify-between">
+                <div>
+                  <p className="font-bold text-white text-sm">AFK Idle Mode</p>
+                  <p className="text-zinc-400">Passive 1 coin/min earning</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSettingsData({ ...settingsData, afkEarningEnabled: !(settingsData.afkEarningEnabled ?? true) })
+                  }
+                  className={`px-3 py-1.5 rounded-xl font-bold text-xs ${
+                    settingsData.afkEarningEnabled ?? true
+                      ? "bg-emerald-500 text-black"
+                      : "bg-red-500/20 text-red-400 border border-red-500/40"
+                  }`}
+                >
+                  {(settingsData.afkEarningEnabled ?? true) ? "ENABLED" : "DISABLED"}
+                </button>
+              </div>
+
+              <div className="p-4 rounded-xl bg-[#121624] border border-[#1e2538] flex items-center justify-between">
+                <div>
+                  <p className="font-bold text-white text-sm">Link Unlock Tasks</p>
+                  <p className="text-zinc-400">Sponsored tasks with timer challenge</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSettingsData({ ...settingsData, linkEarningEnabled: !(settingsData.linkEarningEnabled ?? true) })
+                  }
+                  className={`px-3 py-1.5 rounded-xl font-bold text-xs ${
+                    settingsData.linkEarningEnabled ?? true
+                      ? "bg-emerald-500 text-black"
+                      : "bg-red-500/20 text-red-400 border border-red-500/40"
+                  }`}
+                >
+                  {(settingsData.linkEarningEnabled ?? true) ? "ENABLED" : "DISABLED"}
+                </button>
+              </div>
             </div>
 
             <h4 className="font-bold text-white pt-2">Earning Rates & Caps</h4>
@@ -1764,6 +2059,134 @@ export default function AdminPortalPage() {
         </div>
       )}
 
+      {/* 2b. Delete User Modal */}
+      {deleteUserModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4">
+          <div className="max-w-md w-full bg-[#101422] border border-red-500/40 rounded-2xl p-6 shadow-2xl">
+            <div className="flex items-center gap-2 text-red-400 mb-2">
+              <Trash2 className="w-5 h-5" />
+              <h3 className="text-lg font-bold text-white">Permanently Delete User</h3>
+            </div>
+            <p className="text-xs text-zinc-300 mb-4 leading-relaxed">
+              Are you sure you want to permanently delete user <strong className="text-white">@{deleteUserModal.username}</strong> ({deleteUserModal.email})?
+            </p>
+            <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/20 text-xs text-red-300 mb-6">
+              ⚠️ <strong>Warning:</strong> This action cannot be undone. All related orders, coin transactions, OTPs, and sessions associated with this account will be erased immediately.
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setDeleteUserModal(null)}
+                className="flex-1 py-2.5 rounded-xl bg-[#141824] text-zinc-300 font-semibold text-xs hover:bg-[#1a2030]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDeleteUser(deleteUserModal.id)}
+                className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs shadow-lg shadow-red-600/30"
+              >
+                Permanently Delete User
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2c. Earning Task Modal */}
+      {taskModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4">
+          <div className="max-w-md w-full bg-[#101422] border border-[#20273a] rounded-2xl p-6 shadow-2xl">
+            <h3 className="text-lg font-bold text-white mb-1">
+              {taskModal.id ? "Edit Earning Task" : "Create New Earning Task"}
+            </h3>
+            <p className="text-xs text-zinc-400 mb-4">
+              Configure partner or sponsored task. Users must spend 15 seconds on the link to claim reward coins.
+            </p>
+
+            <form onSubmit={handleSaveTask} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-zinc-300 mb-1 font-semibold">Task Title</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Visit Gaming Blog, Check Sponsor Deal"
+                  value={taskModal.title || ""}
+                  onChange={(e) => setTaskModal({ ...taskModal, title: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#090b12] border border-[#20273a] text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-zinc-300 mb-1 font-semibold">Short Description</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Read latest gaming updates"
+                  value={taskModal.description || ""}
+                  onChange={(e) => setTaskModal({ ...taskModal, description: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#090b12] border border-[#20273a] text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-zinc-300 mb-1 font-semibold">Destination Link URL</label>
+                <input
+                  type="url"
+                  required
+                  placeholder="https://example.com/partner-page"
+                  value={taskModal.linkUrl || ""}
+                  onChange={(e) => setTaskModal({ ...taskModal, linkUrl: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#090b12] border border-[#20273a] text-white"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-zinc-300 mb-1 font-semibold">Reward (Coins)</label>
+                  <input
+                    type="number"
+                    min={1}
+                    required
+                    value={taskModal.rewardCoins || 2}
+                    onChange={(e) => setTaskModal({ ...taskModal, rewardCoins: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#090b12] border border-[#20273a] text-white font-bold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-zinc-300 mb-1 font-semibold">Initial Status</label>
+                  <select
+                    value={taskModal.isActive ? "true" : "false"}
+                    onChange={(e) => setTaskModal({ ...taskModal, isActive: e.target.value === "true" })}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#090b12] border border-[#20273a] text-white"
+                  >
+                    <option value="true">Active (Enabled)</option>
+                    <option value="false">Disabled (Paused)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setTaskModal(null)}
+                  className="flex-1 py-2.5 rounded-xl bg-[#141824] text-zinc-300 font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold"
+                >
+                  {taskModal.id ? "Save Changes" : "Create Task"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* 3. Product Add/Edit Modal */}
       {productModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
@@ -1837,20 +2260,73 @@ export default function AdminPortalPage() {
               </div>
 
               <div>
-                <label className="block text-zinc-300 mb-1 font-semibold">Icon / Image Type</label>
-                <select
-                  value={productModal.image || "gift"}
-                  onChange={(e) => setProductModal({ ...productModal, image: e.target.value })}
-                  className="w-full px-3.5 py-2 rounded-xl bg-[#090b12] border border-[#20273a] text-white"
-                >
-                  <option value="minecraft">Minecraft Block Style</option>
-                  <option value="googleplay">Google Play Card</option>
-                  <option value="steam">Steam Wallet</option>
-                  <option value="discord">Discord Nitro</option>
-                  <option value="spotify">Spotify Premium</option>
-                  <option value="roblox">Roblox Robux</option>
-                  <option value="gift">General Gift Card</option>
-                </select>
+                <label className="block text-zinc-300 mb-1 font-semibold">Product Logo / Image</label>
+                <div className="space-y-3">
+                  {productModal.image && (
+                    <div className="flex items-center gap-4 p-3 rounded-xl bg-[#090b12] border border-[#20273a]">
+                      <div className="w-16 h-16 rounded-lg bg-zinc-900 border border-zinc-700/50 flex items-center justify-center overflow-hidden shrink-0">
+                        {productModal.image.startsWith("data:") || productModal.image.startsWith("http") || productModal.image.startsWith("/") ? (
+                          <img src={productModal.image} alt="Preview" className="w-full h-full object-contain" />
+                        ) : (
+                          <ProductIcon type={productModal.image} className="w-12 h-12" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-white">Current Logo Preview</p>
+                        <p className="text-[11px] text-zinc-400">Upload a new file below to change.</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setProductModal({ ...productModal, image: "" })}
+                        className="text-xs text-red-400 hover:text-red-300 font-semibold px-2 py-1"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="relative">
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/svg+xml,image/webp,image/x-icon"
+                      id="product-logo-upload"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          if (file.size > 2 * 1024 * 1024) {
+                            setError("Image file must be smaller than 2MB");
+                            return;
+                          }
+                          const reader = new FileReader();
+                          reader.onloadend = () => {
+                            setProductModal({ ...productModal, image: reader.result as string });
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                    <label
+                      htmlFor="product-logo-upload"
+                      className="flex flex-col items-center justify-center w-full p-4 border-2 border-dashed border-[#2b354e] hover:border-amber-400/60 rounded-xl bg-[#0a0d16] cursor-pointer transition-colors"
+                    >
+                      <Upload className="w-6 h-6 text-amber-400 mb-1" />
+                      <span className="text-xs font-bold text-white">Click to upload product logo</span>
+                      <span className="text-[11px] text-zinc-400">PNG, JPG, SVG, WebP, or ICO (max 2MB)</span>
+                    </label>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-zinc-500 whitespace-nowrap">Or image URL:</span>
+                    <input
+                      type="text"
+                      placeholder="https://example.com/logo.png"
+                      value={productModal.image && !productModal.image.startsWith("data:") ? productModal.image : ""}
+                      onChange={(e) => setProductModal({ ...productModal, image: e.target.value })}
+                      className="w-full px-3 py-1.5 rounded-lg bg-[#090b12] border border-[#20273a] text-white text-xs"
+                    />
+                  </div>
+                </div>
               </div>
 
               <div>

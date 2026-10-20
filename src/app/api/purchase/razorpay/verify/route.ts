@@ -39,21 +39,14 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Verify signature
-    const { isTestMode } = getRazorpayKeys();
+    // Cryptographic signature verification
     let isValid = false;
-
     if (razorpaySignature) {
       isValid = verifyRazorpaySignature({
         orderId: razorpayOrderId,
         paymentId: razorpayPaymentId,
         signature: razorpaySignature,
       });
-    }
-
-    // If test mode and simulated signature
-    if (!isValid && isTestMode && razorpaySignature === "test_signature_approved") {
-      isValid = true;
     }
 
     if (!isValid) {

@@ -126,7 +126,7 @@ model Order {
   id               String      @id @default(cuid())
   orderNumber      String      @unique
   userId           String
-  user             User        @relation(fields: [userId], references: [id])
+  user             User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   totalCoins       Int
   status           String      @default("PENDING") // "PENDING" | "PROCESSING" | "DELIVERED" | "DECLINED"
   declineReason    String?
@@ -223,7 +223,7 @@ model PaymentRequest {
 model AuditLog {
   id         String   @id @default(cuid())
   adminId    String
-  user       User     @relation(fields: [adminId], references: [id])
+  user       User     @relation(fields: [adminId], references: [id], onDelete: Cascade)
   action     String   // "SUSPEND_USER" | "UNSUSPEND_USER" | "ADJUST_COIN" | "DELIVER_ORDER" | "DECLINE_ORDER" | "UPDATE_SETTINGS" | "APPROVE_PAYMENT" | "REJECT_PAYMENT"
   targetType String   // "USER" | "ORDER" | "SETTING" | "PAYMENT" | "PRODUCT"
   targetId   String
@@ -262,6 +262,10 @@ model WebsiteSettings {
   globalMaintenance          Boolean  @default(false)
   earningMaintenance         Boolean  @default(false)
   purchaseMaintenance        Boolean  @default(false)
+  razorpayEnabled            Boolean  @default(true)
+  manualPaymentEnabled       Boolean  @default(true)
+  afkEarningEnabled          Boolean  @default(true)
+  linkEarningEnabled         Boolean  @default(true)
   linkRewardCoins            Int      @default(2)
   linkDailyMaxCoins          Int      @default(40)
   afkCoinsPerMinute          Int      @default(1)

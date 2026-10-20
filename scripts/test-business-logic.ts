@@ -1,8 +1,15 @@
+import crypto from "crypto";
 import { PrismaClient } from "@prisma/client";
 import { hashPassword, comparePassword, generateOtp, hashOtp } from "../src/lib/auth";
 import { creditCoins, debitCoins, processOrderRefund } from "../src/lib/wallet";
-import { verifyRazorpaySignature, generateTestSignature } from "../src/lib/razorpay";
+import { verifyRazorpaySignature, getRazorpayKeys } from "../src/lib/razorpay";
 import { getTodayDateString } from "../src/lib/date";
+
+function generateTestSignature(orderId: string, paymentId: string): string {
+  const { keySecret } = getRazorpayKeys();
+  const body = `${orderId}|${paymentId}`;
+  return crypto.createHmac("sha256", keySecret || "test_secret").update(body).digest("hex");
+}
 
 const prisma = new PrismaClient();
 

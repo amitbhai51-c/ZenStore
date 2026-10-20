@@ -29,6 +29,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (settings?.linkEarningEnabled === false) {
+      return NextResponse.json(
+        { error: "Link earning is currently disabled by the administrator." },
+        { status: 403 }
+      );
+    }
+
     const task = await prisma.earningTask.findUnique({
       where: { id: taskId },
     });

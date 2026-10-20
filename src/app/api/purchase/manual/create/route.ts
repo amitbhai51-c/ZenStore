@@ -21,6 +21,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (settings?.manualPaymentEnabled === false) {
+      return NextResponse.json(
+        { error: "Manual UPI / QR payments are currently disabled by the administrator." },
+        { status: 403 }
+      );
+    }
+
     const { coins } = await req.json();
     const coinQty = parseInt(coins, 10);
 

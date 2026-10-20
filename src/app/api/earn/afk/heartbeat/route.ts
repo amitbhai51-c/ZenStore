@@ -27,6 +27,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (settings?.afkEarningEnabled === false) {
+      return NextResponse.json(
+        { error: "AFK earning is currently disabled by the administrator." },
+        { status: 403 }
+      );
+    }
+
     const todayDate = getTodayDateString(settings?.timezone || "Asia/Kolkata");
     const afkRate = settings?.afkCoinsPerMinute || 1;
     const afkDailyMax = settings?.afkDailyMaxCoins || 20;
