@@ -1,0 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #08090d;
+  --foreground: #f1f5f9;
+  --surface: #0f121a;
+  --surface-hover: #161a25;
+  --border: #1d2232;
+  --accent: #f59e0b;
+}
+
+body {
+  background-color: #08090d;
+  color: #f1f5f9;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #090a0f;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1f2536;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #2e374f;
+}
+
+/* Tasteful gold / amber accent glow */
+.gold-glow {
+  box-shadow: 0 0 25px -5px rgba(245, 158, 11, 0.25);
+}
+
+.gold-glow-subtle {
+  box-shadow: 0 0 15px -3px rgba(245, 158, 11, 0.12);
+}

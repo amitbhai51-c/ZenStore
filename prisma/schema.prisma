@@ -1,0 +1,329 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String            @id @default(cuid())
+  email            String            @unique
+  username         String            @unique
+  passwordHash     String
+  role             String            @default("USER") // "USER" | "ADMIN"
+  isVerified       Boolean           @default(false)
+  isSuspended      Boolean           @default(false)
+  suspensionReason String?
+  suspendedAt      DateTime?
+  coinBalance      Int               @default(0)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  otps             EmailOtp[]
+  passwordResets   PasswordResetToken[]
+  transactions     CoinTransaction[]
+  orders           Order[]
+  taskCompletions  TaskCompletion[]
+  afkSessions      AfkSession[]
+  paymentRequests  PaymentRequest[]
+  auditLogs        AuditLog[]
+  redeemedCodes    RedeemCodeUsage[]
+  createdCodes     RedeemCode[]
+}
+
+model EmailOtp {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  otpHash     String
+  expiresAt   DateTime
+  attempts    Int      @default(0)
+  resendCount Int      @default(0)
+  lastSentAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model CoinTransaction {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type          String   // "EARNING_LINK" | "EARNING_AFK" | "COIN_PURCHASE" | "PRODUCT_PURCHASE" | "REFUND" | "ADMIN_ADJUSTMENT"
+  amount        Int      // Positive for credit, negative for debit
+  balanceBefore Int
+  balanceAfter  Int
+  referenceId   String?  // Order ID, Task ID, Payment ID, etc.
+  description   String
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+model ProductCategory {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  slug      String    @unique
+  icon      String?
+  products  Product[]
+  createdAt DateTime  @default(now())
+}
+
+model Product {
+  id                   String             @id @default(cuid())
+  name                 String
+  slug                 String             @unique
+  shortDesc            String
+  fullDesc             String
+  categoryId           String
+  category             ProductCategory    @relation(fields: [categoryId], references: [id])
+  coinPrice            Int
+  isAvailable          Boolean            @default(true)
+  stockQuantity        Int                @default(999)
+  image                String             // SVG string, data URL, or image path
+  deliveryInstructions String?
+  isArchived           Boolean            @default(false)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  orderItems           OrderItem[]
+  digitalCodes         DigitalCodeStock[]
+
+  @@index([categoryId])
+  @@index([isAvailable])
+}
+
+model DigitalCodeStock {
+  id        String    @id @default(cuid())
+  productId String
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  code      String
+  isClaimed Boolean   @default(false)
+  orderId   String?
+  claimedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([productId, isClaimed])
+}
+
+model Order {
+  id               String      @id @default(cuid())
+  orderNumber      String      @unique
+  userId           String
+  user             User        @relation(fields: [userId], references: [id])
+  totalCoins       Int
+  status           String      @default("PENDING") // "PENDING" | "PROCESSING" | "DELIVERED" | "DECLINED"
+  declineReason    String?
+  refundProcessed  Boolean     @default(false)
+  digitalDelivery  String?     // Delivered codes, instructions or links
+  deliveredAt      DateTime?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  items            OrderItem[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id            String   @id @default(cuid())
+  orderId       String
+  order         Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId     String
+  product       Product  @relation(fields: [productId], references: [id])
+  productName   String
+  coinPrice     Int
+  quantity      Int
+  subtotalCoins Int
+
+  @@index([orderId])
+}
+
+model EarningTask {
+  id          String           @id @default(cuid())
+  title       String
+  description String
+  linkUrl     String
+  rewardCoins Int              @default(2)
+  isActive    Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+
+  completions TaskCompletion[]
+}
+
+model TaskCompletion {
+  id            String      @id @default(cuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  taskId        String
+  task          EarningTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  coinsEarned   Int
+  completedDate String      // Format: YYYY-MM-DD in configured server timezone
+  createdAt     DateTime    @default(now())
+
+  @@unique([userId, taskId, completedDate])
+  @@index([userId, completedDate])
+}
+
+model AfkSession {
+  id               String    @id @default(cuid())
+  userId           String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startedAt        DateTime  @default(now())
+  lastHeartbeatAt  DateTime  @default(now())
+  endedAt          DateTime?
+  minutesElapsed   Int       @default(0)
+  coinsEarned      Int       @default(0)
+  sessionDate      String    // Format: YYYY-MM-DD
+  isActive         Boolean   @default(true)
+
+  @@index([userId, sessionDate])
+}
+
+model PaymentRequest {
+  id               String    @id @default(cuid())
+  paymentReference String    @unique
+  userId           String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  coinsAmount      Int
+  amountInrPaise   Int       // 100 paise = ₹1
+  paymentMethod    String    // "RAZORPAY" | "MANUAL_URL"
+  status           String    @default("PENDING") // "PENDING" | "SUCCESS" | "FAILED" | "REJECTED"
+  utrReference     String?   // UTR / transaction ID submitted by user
+  razorpayOrderId  String?
+  razorpayPaymentId String?
+  adminNote        String?
+  reviewedBy       String?
+  reviewedAt       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  adminId    String
+  user       User     @relation(fields: [adminId], references: [id])
+  action     String   // "SUSPEND_USER" | "UNSUSPEND_USER" | "ADJUST_COIN" | "DELIVER_ORDER" | "DECLINE_ORDER" | "UPDATE_SETTINGS" | "APPROVE_PAYMENT" | "REJECT_PAYMENT"
+  targetType String   // "USER" | "ORDER" | "SETTING" | "PAYMENT" | "PRODUCT"
+  targetId   String
+  details    String   // JSON string
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  @@index([adminId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model ContactMessage {
+  id         String   @id @default(cuid())
+  name       String
+  email      String
+  subject    String
+  message    String
+  status     String   @default("UNREAD") // "UNREAD" | "READ" | "REPLIED" | "ARCHIVED"
+  adminReply String?
+  createdAt  DateTime @default(now())
+
+  @@index([status])
+}
+
+model WebsiteSettings {
+  id                         String   @id @default("default")
+  siteName                   String   @default("CoinCraft")
+  tagline                    String   @default("Earn Coins, Redeem Digital Products")
+  logoUrl                    String   @default("")
+  faviconUrl                 String   @default("")
+  contactEmail               String   @default("support@coincraft.local")
+  supportInfo                String   @default("Available Mon-Fri 9AM-6PM IST")
+  footerText                 String   @default("© 2026 CoinCraft Digital Store. All rights reserved.")
+  timezone                   String   @default("Asia/Kolkata")
+  globalMaintenance          Boolean  @default(false)
+  earningMaintenance         Boolean  @default(false)
+  purchaseMaintenance        Boolean  @default(false)
+  linkRewardCoins            Int      @default(2)
+  linkDailyMaxCoins          Int      @default(40)
+  afkCoinsPerMinute          Int      @default(1)
+  afkDailyMaxCoins           Int      @default(20)
+  coinExchangeRateInr        Int      @default(10) // 10 coins = ₹1
+  manualPaymentUrl           String   @default("https://upi.example.com/pay")
+  manualPaymentInstructions  String   @default("Scan UPI QR or pay to the payment link. Paste the 12-digit UTR/transaction ID below for manual verification.")
+  updatedAt                  DateTime @updatedAt
+}
+
+model SmtpSettings {
+  id           String   @id @default("default")
+  host         String   @default("")
+  port         Int      @default(587)
+  username     String   @default("")
+  password     String   @default("")
+  secure       Boolean  @default(false)
+  senderName   String   @default("CoinCraft Store")
+  senderEmail  String   @default("noreply@coincraft.local")
+  isConfigured Boolean  @default(false)
+  updatedAt    DateTime @updatedAt
+}
+
+model EmailTemplate {
+  id            String   @id @default(cuid())
+  type          String   @unique // "WELCOME", "OTP_VERIFY", "PASSWORD_RESET", "PASSWORD_CHANGED", "ORDER_DELIVERED", "ORDER_DECLINED", "ACCOUNT_SUSPENDED", "ACCOUNT_UNSUSPENDED", "COIN_PURCHASE_SUCCESS", "MANUAL_PAYMENT_STATUS", "PAYMENT_FAILED"
+  name          String
+  subject       String
+  htmlBody      String
+  description   String
+  variablesJson String   // JSON array of available placeholders
+  updatedAt     DateTime @updatedAt
+}
+
+model RedeemCode {
+  id             String            @id @default(cuid())
+  code           String            @unique
+  coinAmount     Int
+  maxUses        Int               @default(1) // 0 means unlimited
+  timesRedeemed  Int               @default(0)
+  expiresAt      DateTime?
+  isActive       Boolean           @default(true)
+  createdById    String?
+  createdBy      User?             @relation(fields: [createdById], references: [id])
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  usages         RedeemCodeUsage[]
+
+  @@index([code])
+  @@index([isActive])
+}
+
+model RedeemCodeUsage {
+  id           String      @id @default(cuid())
+  codeId       String
+  redeemCode   RedeemCode  @relation(fields: [codeId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  coinsAwarded Int
+  redeemedAt   DateTime    @default(now())
+
+  @@unique([codeId, userId])
+  @@index([userId])
+}
