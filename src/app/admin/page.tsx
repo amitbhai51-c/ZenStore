@@ -1544,13 +1544,193 @@ export default function AdminPortalPage() {
 
       {/* ======================= TAB: WEBSITE SETTINGS ======================= */}
       {activeTab === "settings" && settingsData && (
-        <div className="p-6 rounded-2xl bg-[#0d101a] border border-[#1c2234] max-w-3xl">
-          <h3 className="text-base font-bold text-white mb-4">Website Information & Branding</h3>
+        <div className="p-6 rounded-2xl bg-[#0d101a] border border-[#1c2234] max-w-4xl space-y-6">
+          <div>
+            <h3 className="text-base font-bold text-white mb-1">Website Information & Visual Branding</h3>
+            <p className="text-xs text-zinc-400">
+              Customize website identity, navbar brand logo, browser title icon (favicon), and contact info.
+            </p>
+          </div>
 
-          <form onSubmit={handleSaveSettings} className="space-y-4 text-xs">
+          <form onSubmit={handleSaveSettings} className="space-y-6 text-xs">
+            {/* Visual Branding: Website Logo & Title Favicon */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 rounded-xl bg-[#080a11] border border-[#1b2133]">
+              {/* 1. Website Logo (Header & Footer) */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-white flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-amber-400"></span>
+                    <span>Website Logo (Header & Footer)</span>
+                  </label>
+                  {settingsData.logoUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setSettingsData({ ...settingsData, logoUrl: "" })}
+                      className="text-[11px] text-red-400 hover:text-red-300 flex items-center gap-1"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      <span>Remove</span>
+                    </button>
+                  )}
+                </div>
+                <p className="text-[11px] text-zinc-400">
+                  Displayed in the top navigation bar and footer across all pages.
+                </p>
+
+                {/* Logo Preview */}
+                <div className="h-24 rounded-xl bg-[#0e121d] border border-[#20273a] flex items-center justify-center p-3 relative group">
+                  {settingsData.logoUrl ? (
+                    <img
+                      src={settingsData.logoUrl}
+                      alt="Website Logo Preview"
+                      className="max-h-full max-w-full object-contain"
+                    />
+                  ) : (
+                    <div className="flex items-center gap-2 text-zinc-500">
+                      <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold">
+                        <Coins className="w-5 h-5" />
+                      </div>
+                      <span className="text-xs text-zinc-400">Default (Coins Icon + Text)</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Upload Button */}
+                <div className="relative">
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/svg+xml,image/webp,image/x-icon"
+                    id="website-logo-upload"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        if (file.size > 2 * 1024 * 1024) {
+                          setError("Logo image file must be smaller than 2MB");
+                          return;
+                        }
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          setSettingsData({ ...settingsData, logoUrl: reader.result as string });
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                  <label
+                    htmlFor="website-logo-upload"
+                    className="flex items-center justify-center gap-2 w-full py-2.5 px-4 border border-[#27324c] hover:border-amber-400/60 rounded-xl bg-[#121624] hover:bg-[#161c2e] cursor-pointer text-white font-semibold transition-all"
+                  >
+                    <Upload className="w-4 h-4 text-amber-400" />
+                    <span>Upload Website Logo</span>
+                  </label>
+                </div>
+
+                {/* Direct URL Fallback */}
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-zinc-500 whitespace-nowrap">Or URL:</span>
+                  <input
+                    type="text"
+                    placeholder="https://example.com/logo.png"
+                    value={settingsData.logoUrl && !settingsData.logoUrl.startsWith("data:") ? settingsData.logoUrl : ""}
+                    onChange={(e) => setSettingsData({ ...settingsData, logoUrl: e.target.value })}
+                    className="w-full px-2.5 py-1.5 rounded-lg bg-[#0e121d] border border-[#20273a] text-white text-[11px]"
+                  />
+                </div>
+              </div>
+
+              {/* 2. Title Icon / Favicon (Browser Tab & Bookmarks) */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-white flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-sky-400"></span>
+                    <span>Title Icon / Favicon (Browser Tab)</span>
+                  </label>
+                  {settingsData.faviconUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setSettingsData({ ...settingsData, faviconUrl: "" })}
+                      className="text-[11px] text-red-400 hover:text-red-300 flex items-center gap-1"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      <span>Remove</span>
+                    </button>
+                  )}
+                </div>
+                <p className="text-[11px] text-zinc-400">
+                  Displayed in browser tabs, address bar, bookmarks, and mobile home screens.
+                </p>
+
+                {/* Favicon Browser Tab Mockup Preview */}
+                <div className="h-24 rounded-xl bg-[#0e121d] border border-[#20273a] flex flex-col justify-center px-4 py-2">
+                  <span className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1 font-semibold">Browser Tab Preview:</span>
+                  <div className="max-w-xs flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#181d2a] border border-[#252e42] shadow-sm">
+                    {settingsData.faviconUrl ? (
+                      <img
+                        src={settingsData.faviconUrl}
+                        alt="Favicon Preview"
+                        className="w-4 h-4 object-contain rounded-sm"
+                      />
+                    ) : (
+                      <div className="w-4 h-4 rounded-full bg-amber-400 flex items-center justify-center text-[9px] text-black font-black">
+                        C
+                      </div>
+                    )}
+                    <span className="text-[11px] font-medium text-zinc-200 truncate">
+                      {settingsData.siteName || "CoinCraft"} - Digital Store
+                    </span>
+                  </div>
+                </div>
+
+                {/* Upload Button */}
+                <div className="relative">
+                  <input
+                    type="file"
+                    accept="image/x-icon,image/png,image/svg+xml,image/webp,image/jpeg"
+                    id="website-favicon-upload"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        if (file.size > 2 * 1024 * 1024) {
+                          setError("Favicon file must be smaller than 2MB");
+                          return;
+                        }
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          setSettingsData({ ...settingsData, faviconUrl: reader.result as string });
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                  <label
+                    htmlFor="website-favicon-upload"
+                    className="flex items-center justify-center gap-2 w-full py-2.5 px-4 border border-[#27324c] hover:border-sky-400/60 rounded-xl bg-[#121624] hover:bg-[#161c2e] cursor-pointer text-white font-semibold transition-all"
+                  >
+                    <Upload className="w-4 h-4 text-sky-400" />
+                    <span>Upload Title Icon / Favicon</span>
+                  </label>
+                </div>
+
+                {/* Direct URL Fallback */}
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-zinc-500 whitespace-nowrap">Or URL:</span>
+                  <input
+                    type="text"
+                    placeholder="https://example.com/favicon.ico"
+                    value={settingsData.faviconUrl && !settingsData.faviconUrl.startsWith("data:") ? settingsData.faviconUrl : ""}
+                    onChange={(e) => setSettingsData({ ...settingsData, faviconUrl: e.target.value })}
+                    className="w-full px-2.5 py-1.5 rounded-lg bg-[#0e121d] border border-[#20273a] text-white text-[11px]"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* General Info Inputs */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-zinc-400 mb-1">Website Name</label>
+                <label className="block text-zinc-400 mb-1 font-semibold">Website Name</label>
                 <input
                   type="text"
                   value={settingsData.siteName || ""}
@@ -1560,7 +1740,7 @@ export default function AdminPortalPage() {
               </div>
 
               <div>
-                <label className="block text-zinc-400 mb-1">Tagline</label>
+                <label className="block text-zinc-400 mb-1 font-semibold">Tagline</label>
                 <input
                   type="text"
                   value={settingsData.tagline || ""}
@@ -1572,7 +1752,7 @@ export default function AdminPortalPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-zinc-400 mb-1">Contact Email</label>
+                <label className="block text-zinc-400 mb-1 font-semibold">Contact Email</label>
                 <input
                   type="email"
                   value={settingsData.contactEmail || ""}
@@ -1582,7 +1762,7 @@ export default function AdminPortalPage() {
               </div>
 
               <div>
-                <label className="block text-zinc-400 mb-1">Server Timezone</label>
+                <label className="block text-zinc-400 mb-1 font-semibold">Server Timezone</label>
                 <input
                   type="text"
                   value={settingsData.timezone || "Asia/Kolkata"}
@@ -1593,7 +1773,7 @@ export default function AdminPortalPage() {
             </div>
 
             <div>
-              <label className="block text-zinc-400 mb-1">Support Desk Details</label>
+              <label className="block text-zinc-400 mb-1 font-semibold">Support Desk Details</label>
               <input
                 type="text"
                 value={settingsData.supportInfo || ""}
@@ -1603,7 +1783,7 @@ export default function AdminPortalPage() {
             </div>
 
             <div>
-              <label className="block text-zinc-400 mb-1">Footer Copyright / Branding Text</label>
+              <label className="block text-zinc-400 mb-1 font-semibold">Footer Copyright / Branding Text</label>
               <input
                 type="text"
                 value={settingsData.footerText || ""}
@@ -1617,7 +1797,7 @@ export default function AdminPortalPage() {
                 type="submit"
                 className="px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs shadow-md shadow-amber-500/20"
               >
-                Save Website Information
+                Save Website Information & Branding
               </button>
             </div>
           </form>

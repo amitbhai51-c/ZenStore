@@ -19,7 +19,7 @@ import {
   Ticket,
 } from "lucide-react";
 
-export function Navbar({ siteName = "CoinCraft" }: { siteName?: string }) {
+export function Navbar({ siteName = "CoinCraft", logoUrl = "" }: { siteName?: string; logoUrl?: string }) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const { totalItems } = useCart();
@@ -34,10 +34,20 @@ export function Navbar({ siteName = "CoinCraft" }: { siteName?: string }) {
         <div className="flex items-center justify-between h-16">
           {/* Logo & Brand */}
           <div className="flex items-center gap-8">
-            <Link href="/" className="flex items-center gap-2 group">
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/20 group-hover:scale-105 transition-transform">
-                <Coins className="w-5 h-5 text-black" />
-              </div>
+            <Link href="/" className="flex items-center gap-2.5 group">
+              {logoUrl ? (
+                <div className="w-9 h-9 rounded-lg overflow-hidden bg-[#121622] border border-[#202638] flex items-center justify-center p-0.5 group-hover:border-amber-400/50 transition-all">
+                  <img
+                    src={logoUrl}
+                    alt={siteName}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+              ) : (
+                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/20 group-hover:scale-105 transition-transform">
+                  <Coins className="w-5 h-5 text-black" />
+                </div>
+              )}
               <span className="text-xl font-bold tracking-tight text-white group-hover:text-amber-400 transition-colors">
                 {siteName}
               </span>

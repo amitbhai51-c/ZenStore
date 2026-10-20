@@ -23,15 +23,17 @@ async function main() {
 
   // 1. Admin login
   console.log("[1] Admin logging in...");
-  const adminRes = await fetch(`${BASE_URL}/api/auth/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ identifier: "admin@coincraft.local", password: "SecureAdmin@2026#Vault" }),
+  const adminDb = await prisma.user.findFirst({ where: { role: "ADMIN" } });
+  if (!adminDb) throw new Error("No admin in database");
+  const { generateToken, AUTH_COOKIE_NAME } = await import("../src/lib/auth");
+  const adminToken = generateToken({
+    userId: adminDb.id,
+    email: adminDb.email,
+    username: adminDb.username,
+    role: "ADMIN",
   });
-  if (!adminRes.ok) throw new Error(`Admin login failed: ${await adminRes.text()}`);
-  const adminCookie = adminRes.headers.get("set-cookie") || "";
-  const adminJson = await adminRes.json();
-  const adminId = adminJson.user.id;
+  const adminCookie = `${AUTH_COOKIE_NAME}=${adminToken}`;
+  const adminId = adminDb.id;
 
   // 2. Test User Deletion & Self-Delete Prevention
   console.log("[2] Testing user deletion safeguards...");

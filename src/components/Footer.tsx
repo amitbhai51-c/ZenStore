@@ -4,11 +4,13 @@ import { Coins, ShieldCheck, Mail, Headphones, HelpCircle } from "lucide-react";
 
 export function Footer({
   siteName = "CoinCraft",
+  logoUrl = "",
   footerText = "© 2026 CoinCraft Digital Store. All rights reserved.",
   supportInfo = "Support available 24/7 online",
   contactEmail = "support@coincraft.local",
 }: {
   siteName?: string;
+  logoUrl?: string;
   footerText?: string;
   supportInfo?: string;
   contactEmail?: string;
@@ -19,10 +21,20 @@ export function Footer({
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Brand Info */}
           <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center text-black font-bold">
-                <Coins className="w-5 h-5" />
-              </div>
+            <div className="flex items-center gap-2.5">
+              {logoUrl ? (
+                <div className="w-8 h-8 rounded-lg overflow-hidden bg-[#121622] border border-[#202638] flex items-center justify-center p-0.5">
+                  <img
+                    src={logoUrl}
+                    alt={siteName}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+              ) : (
+                <div className="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center text-black font-bold">
+                  <Coins className="w-5 h-5" />
+                </div>
+              )}
               <span className="text-lg font-bold text-white">{siteName}</span>
             </div>
             <p className="text-xs text-zinc-400 leading-relaxed">
