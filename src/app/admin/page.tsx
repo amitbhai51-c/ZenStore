@@ -78,6 +78,27 @@ export default function AdminPortalPage() {
   const [suspendModal, setSuspendModal] = useState<{ userId: string; username: string; isSuspended: boolean } | null>(null);
   const [suspendReason, setSuspendReason] = useState("");
 
+  // Create & Edit User Modals
+  const [createUserModal, setCreateUserModal] = useState<{
+    username: string;
+    email: string;
+    password: string;
+    role: string;
+    isVerified: boolean;
+    coinBalance: number;
+  } | null>(null);
+
+  const [editUserModal, setEditUserModal] = useState<{
+    id: string;
+    username: string;
+    email: string;
+    password?: string;
+    role: string;
+    isVerified: boolean;
+    isSuspended: boolean;
+    suspensionReason?: string;
+  } | null>(null);
+
   // Delete User Confirmation Modal
   const [deleteUserModal, setDeleteUserModal] = useState<{
     id: string;
@@ -308,6 +329,50 @@ export default function AdminPortalPage() {
       }
     } catch {
       setError("Network error while deleting user");
+    }
+  };
+
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!createUserModal) return;
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(createUserModal),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Failed to create user");
+      } else {
+        setMessage(data.message || "User created successfully!");
+        setCreateUserModal(null);
+        loadTabData("users");
+      }
+    } catch {
+      setError("Network error while creating user");
+    }
+  };
+
+  const handleEditUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editUserModal) return;
+    try {
+      const res = await fetch(`/api/admin/users/${editUserModal.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editUserModal),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Failed to update user");
+      } else {
+        setMessage(data.message || "User updated successfully!");
+        setEditUserModal(null);
+        loadTabData("users");
+      }
+    } catch {
+      setError("Network error while updating user");
     }
   };
 
@@ -821,13 +886,32 @@ export default function AdminPortalPage() {
               />
             </div>
 
-            <button
-              onClick={() => loadTabData("users")}
-              className="px-4 py-2 rounded-xl bg-[#141824] border border-[#22293d] text-xs text-zinc-300 hover:text-white flex items-center gap-1.5"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              Refresh Users
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  setCreateUserModal({
+                    username: "",
+                    email: "",
+                    password: "",
+                    role: "USER",
+                    isVerified: true,
+                    coinBalance: 0,
+                  });
+                }}
+                className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs flex items-center gap-1.5 shadow-md shadow-amber-500/20"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Create User</span>
+              </button>
+
+              <button
+                onClick={() => loadTabData("users")}
+                className="px-4 py-2 rounded-xl bg-[#141824] border border-[#22293d] text-xs text-zinc-300 hover:text-white flex items-center gap-1.5"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Refresh Users
+              </button>
+            </div>
           </div>
 
           <div className="overflow-x-auto rounded-2xl border border-[#1c2234]">
@@ -876,6 +960,25 @@ export default function AdminPortalPage() {
                     </td>
                     <td className="p-3.5 text-zinc-400">{u._count?.orders ?? 0}</td>
                     <td className="p-3.5 text-right space-x-2">
+                      <button
+                        onClick={() =>
+                          setEditUserModal({
+                            id: u.id,
+                            username: u.username,
+                            email: u.email,
+                            role: u.role,
+                            isVerified: u.isVerified,
+                            isSuspended: u.isSuspended,
+                            suspensionReason: u.suspensionReason || "",
+                            password: "",
+                          })
+                        }
+                        className="px-2.5 py-1 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/30 font-semibold text-[11px] inline-flex items-center gap-1"
+                      >
+                        <Edit2 className="w-3 h-3" />
+                        <span>Edit</span>
+                      </button>
+
                       <button
                         onClick={() => {
                           setCoinModal({ userId: u.id, username: u.username, email: u.email });
@@ -2052,6 +2155,229 @@ export default function AdminPortalPage() {
                   }`}
                 >
                   {suspendModal.isSuspended ? "Confirm Unsuspend" : "Confirm Suspension"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 2a-1. Create User Modal */}
+      {createUserModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4">
+          <div className="max-w-md w-full bg-[#101422] border border-[#20273a] rounded-2xl p-6 shadow-2xl">
+            <div className="flex items-center gap-2 text-amber-400 mb-1">
+              <Users className="w-5 h-5" />
+              <h3 className="text-lg font-bold text-white">Create New User</h3>
+            </div>
+            <p className="text-xs text-zinc-400 mb-4">
+              Add a new registered user directly to the database with credentials and initial coins.
+            </p>
+
+            <form onSubmit={handleCreateUser} className="space-y-3.5 text-xs">
+              <div>
+                <label className="block text-zinc-300 mb-1 font-semibold">Username</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. gamer_hero"
+                  value={createUserModal.username}
+                  onChange={(e) => setCreateUserModal({ ...createUserModal, username: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl bg-[#0a0d16] border border-[#20273a] text-white focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-zinc-300 mb-1 font-semibold">Email Address</label>
+                <input
+                  type="email"
+                  required
+                  placeholder="e.g. user@domain.com"
+                  value={createUserModal.email}
+                  onChange={(e) => setCreateUserModal({ ...createUserModal, email: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl bg-[#0a0d16] border border-[#20273a] text-white focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-zinc-300 mb-1 font-semibold">Password</label>
+                <input
+                  type="password"
+                  required
+                  minLength={6}
+                  placeholder="At least 6 characters"
+                  value={createUserModal.password}
+                  onChange={(e) => setCreateUserModal({ ...createUserModal, password: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl bg-[#0a0d16] border border-[#20273a] text-white focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-zinc-300 mb-1 font-semibold">Role</label>
+                  <select
+                    value={createUserModal.role}
+                    onChange={(e) => setCreateUserModal({ ...createUserModal, role: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-[#0a0d16] border border-[#20273a] text-white focus:outline-none focus:border-amber-500"
+                  >
+                    <option value="USER">USER</option>
+                    <option value="ADMIN">ADMIN</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-zinc-300 mb-1 font-semibold">Initial Coins</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={createUserModal.coinBalance}
+                    onChange={(e) => setCreateUserModal({ ...createUserModal, coinBalance: Math.max(0, parseInt(e.target.value) || 0) })}
+                    className="w-full px-3 py-2 rounded-xl bg-[#0a0d16] border border-[#20273a] text-white focus:outline-none focus:border-amber-500 font-bold text-amber-400"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-1">
+                <label className="flex items-center gap-2 cursor-pointer p-2.5 rounded-xl bg-[#0a0d16] border border-[#20273a]">
+                  <input
+                    type="checkbox"
+                    checked={createUserModal.isVerified}
+                    onChange={(e) => setCreateUserModal({ ...createUserModal, isVerified: e.target.checked })}
+                    className="rounded text-amber-500 focus:ring-0 bg-[#121624] border-[#252e42] w-4 h-4"
+                  />
+                  <span className="text-zinc-200 font-medium">Pre-verify Email (Bypass OTP requirement)</span>
+                </label>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setCreateUserModal(null)}
+                  className="px-4 py-2 rounded-xl bg-[#141824] text-zinc-300 font-semibold text-xs hover:bg-[#1a2030]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs"
+                >
+                  Create User Account
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 2a-2. Edit User Modal */}
+      {editUserModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4">
+          <div className="max-w-md w-full bg-[#101422] border border-[#20273a] rounded-2xl p-6 shadow-2xl">
+            <div className="flex items-center gap-2 text-sky-400 mb-1">
+              <Edit2 className="w-5 h-5" />
+              <h3 className="text-lg font-bold text-white">Edit User: @{editUserModal.username}</h3>
+            </div>
+            <p className="text-xs text-zinc-400 mb-4">
+              Update user account details including username, email, password, and permissions.
+            </p>
+
+            <form onSubmit={handleEditUser} className="space-y-3.5 text-xs">
+              <div>
+                <label className="block text-zinc-300 mb-1 font-semibold">Username</label>
+                <input
+                  type="text"
+                  required
+                  value={editUserModal.username}
+                  onChange={(e) => setEditUserModal({ ...editUserModal, username: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl bg-[#0a0d16] border border-[#20273a] text-white focus:outline-none focus:border-sky-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-zinc-300 mb-1 font-semibold">Email Address</label>
+                <input
+                  type="email"
+                  required
+                  value={editUserModal.email}
+                  onChange={(e) => setEditUserModal({ ...editUserModal, email: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl bg-[#0a0d16] border border-[#20273a] text-white focus:outline-none focus:border-sky-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-zinc-300 mb-1 font-semibold">
+                  New Password <span className="text-zinc-500 font-normal">(Leave blank to keep existing)</span>
+                </label>
+                <input
+                  type="password"
+                  placeholder="Enter new password (optional)"
+                  value={editUserModal.password || ""}
+                  onChange={(e) => setEditUserModal({ ...editUserModal, password: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl bg-[#0a0d16] border border-[#20273a] text-white focus:outline-none focus:border-sky-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-zinc-300 mb-1 font-semibold">Account Role</label>
+                <select
+                  value={editUserModal.role}
+                  onChange={(e) => setEditUserModal({ ...editUserModal, role: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl bg-[#0a0d16] border border-[#20273a] text-white focus:outline-none focus:border-sky-500"
+                >
+                  <option value="USER">USER</option>
+                  <option value="ADMIN">ADMIN</option>
+                </select>
+              </div>
+
+              <div className="space-y-2 pt-1">
+                <label className="flex items-center gap-2 cursor-pointer p-2.5 rounded-xl bg-[#0a0d16] border border-[#20273a]">
+                  <input
+                    type="checkbox"
+                    checked={editUserModal.isVerified}
+                    onChange={(e) => setEditUserModal({ ...editUserModal, isVerified: e.target.checked })}
+                    className="rounded text-sky-500 focus:ring-0 bg-[#121624] border-[#252e42] w-4 h-4"
+                  />
+                  <span className="text-zinc-200 font-medium">Email Verified</span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer p-2.5 rounded-xl bg-[#0a0d16] border border-[#20273a]">
+                  <input
+                    type="checkbox"
+                    checked={editUserModal.isSuspended}
+                    onChange={(e) => setEditUserModal({ ...editUserModal, isSuspended: e.target.checked })}
+                    className="rounded text-red-500 focus:ring-0 bg-[#121624] border-[#252e42] w-4 h-4"
+                  />
+                  <span className="text-zinc-200 font-medium text-red-400">Account Suspended</span>
+                </label>
+              </div>
+
+              {editUserModal.isSuspended && (
+                <div>
+                  <label className="block text-zinc-300 mb-1 font-semibold">Suspension Reason</label>
+                  <input
+                    type="text"
+                    required={editUserModal.isSuspended}
+                    placeholder="Provide reason for suspension..."
+                    value={editUserModal.suspensionReason || ""}
+                    onChange={(e) => setEditUserModal({ ...editUserModal, suspensionReason: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-[#0a0d16] border border-red-500/30 text-white focus:outline-none focus:border-red-500"
+                  />
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditUserModal(null)}
+                  className="px-4 py-2 rounded-xl bg-[#141824] text-zinc-300 font-semibold text-xs hover:bg-[#1a2030]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-black font-bold text-xs"
+                >
+                  Save Changes
                 </button>
               </div>
             </form>
