@@ -58,7 +58,9 @@ export async function sendEmail({
     const port = smtp?.port || Number(process.env.SMTP_PORT) || 587;
     const user = smtp?.username || process.env.SMTP_USER;
     const pass = smtp?.password || process.env.SMTP_PASS;
-    const secure = smtp ? smtp.secure : process.env.SMTP_SECURE === "true";
+    // Auto-detect secure: Port 465 requires direct SSL/TLS; Port 587 uses STARTTLS
+    const isPort465 = Number(port) === 465;
+    const secure = isPort465 ? true : (smtp ? smtp.secure : process.env.SMTP_SECURE === "true");
     const senderName = smtp?.senderName || "CoinCraft Store";
     const senderEmail = smtp?.senderEmail || process.env.SMTP_FROM || "noreply@coincraft.local";
 
@@ -79,6 +81,12 @@ export async function sendEmail({
         user,
         pass,
       },
+      tls: {
+        rejectUnauthorized: false,
+      },
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 15000,
     });
 
     const info = await transporter.sendMail({
@@ -100,21 +108,29 @@ export async function testSmtpSettings(settings: {
   port: number;
   username: string;
   password?: string;
-  secure: boolean;
+  secure?: boolean;
   senderName: string;
   senderEmail: string;
   testRecipient: string;
 }) {
   try {
+    const isPort465 = Number(settings.port) === 465;
+    const secure = isPort465 ? true : Boolean(settings.secure);
+
     const transporter = nodemailer.createTransport({
       host: settings.host,
       port: settings.port,
-      secure: settings.secure,
+      secure,
       auth: {
         user: settings.username,
         pass: settings.password || "",
       },
-      connectionTimeout: 8000,
+      tls: {
+        rejectUnauthorized: false,
+      },
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 15000,
     });
 
     // Verify SMTP connection

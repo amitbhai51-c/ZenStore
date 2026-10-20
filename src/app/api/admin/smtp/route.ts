@@ -46,15 +46,18 @@ export async function POST(req: NextRequest) {
     });
 
     const finalPassword = password && password.trim() !== "" ? password : existing?.password || "";
+    const parsedPort = parseInt(port, 10) || 587;
+    // For Port 465, secure must default to true unless explicitly unchecked as false
+    const finalSecure = parsedPort === 465 ? (secure === false ? false : true) : Boolean(secure);
 
     const updated = await prisma.smtpSettings.upsert({
       where: { id: "default" },
       update: {
         host: host?.trim() || "",
-        port: parseInt(port, 10) || 587,
+        port: parsedPort,
         username: username?.trim() || "",
         password: finalPassword,
-        secure: Boolean(secure),
+        secure: finalSecure,
         senderName: senderName?.trim() || "CoinCraft Store",
         senderEmail: senderEmail?.trim() || "noreply@coincraft.local",
         isConfigured: Boolean(host && username),
@@ -62,10 +65,10 @@ export async function POST(req: NextRequest) {
       create: {
         id: "default",
         host: host?.trim() || "",
-        port: parseInt(port, 10) || 587,
+        port: parsedPort,
         username: username?.trim() || "",
         password: finalPassword,
-        secure: Boolean(secure),
+        secure: finalSecure,
         senderName: senderName?.trim() || "CoinCraft Store",
         senderEmail: senderEmail?.trim() || "noreply@coincraft.local",
         isConfigured: Boolean(host && username),

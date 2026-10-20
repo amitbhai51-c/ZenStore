@@ -126,6 +126,7 @@ export default function AdminPortalPage() {
 
   const [selectedTemplate, setSelectedTemplate] = useState<any | null>(null);
   const [testEmailRecipient, setTestEmailRecipient] = useState("");
+  const [testingSmtp, setTestingSmtp] = useState(false);
 
   // Check admin role
   useEffect(() => {
@@ -607,20 +608,24 @@ export default function AdminPortalPage() {
 
   const handleTestSmtp = async () => {
     try {
-      setMessage("Testing SMTP connection...");
+      setTestingSmtp(true);
+      setError("");
+      setMessage("Testing SMTP connection and dispatching test email...");
       const res = await fetch("/api/admin/smtp/test", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ testRecipient: testEmailRecipient || user?.email }),
+        body: JSON.stringify({ testRecipient: testEmailRecipient.trim() || user?.email }),
       });
       const data = await res.json();
       if (res.ok) {
-        setMessage(data.message);
+        setMessage(data.message || "Test email sent successfully!");
       } else {
-        setError(data.error);
+        setError(data.error || "Failed to send test email");
       }
     } catch {
-      setError("Failed to run SMTP test");
+      setError("Failed to run SMTP test due to network error");
+    } finally {
+      setTestingSmtp(false);
     }
   };
 
@@ -1834,13 +1839,73 @@ export default function AdminPortalPage() {
             </span>
           </div>
 
+          {/* Quick Presets */}
+          <div className="flex flex-wrap items-center gap-2 pb-2 border-b border-[#1c2234]">
+            <span className="text-[11px] text-zinc-400 font-semibold mr-1">Quick Presets:</span>
+            <button
+              type="button"
+              onClick={() =>
+                setSmtpData({
+                  ...smtpData,
+                  host: "smtp.zoho.in",
+                  port: 465,
+                  secure: true,
+                })
+              }
+              className="px-2.5 py-1 rounded-lg bg-[#141826] hover:bg-[#1c2236] border border-[#27324c] text-[11px] text-amber-400 font-medium transition-colors"
+            >
+              Zoho Mail (India) 465 SSL
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                setSmtpData({
+                  ...smtpData,
+                  host: "smtp.zoho.com",
+                  port: 465,
+                  secure: true,
+                })
+              }
+              className="px-2.5 py-1 rounded-lg bg-[#141826] hover:bg-[#1c2236] border border-[#27324c] text-[11px] text-amber-400 font-medium transition-colors"
+            >
+              Zoho Mail (Global) 465 SSL
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                setSmtpData({
+                  ...smtpData,
+                  host: "smtp.gmail.com",
+                  port: 465,
+                  secure: true,
+                })
+              }
+              className="px-2.5 py-1 rounded-lg bg-[#141826] hover:bg-[#1c2236] border border-[#27324c] text-[11px] text-sky-400 font-medium transition-colors"
+            >
+              Gmail 465 SSL
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                setSmtpData({
+                  ...smtpData,
+                  port: 587,
+                  secure: false,
+                })
+              }
+              className="px-2.5 py-1 rounded-lg bg-[#141826] hover:bg-[#1c2236] border border-[#27324c] text-[11px] text-zinc-300 font-medium transition-colors"
+            >
+              Port 587 (STARTTLS)
+            </button>
+          </div>
+
           <form onSubmit={handleSaveSmtp} className="space-y-4 text-xs">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-zinc-400 mb-1">SMTP Host</label>
+                <label className="block text-zinc-400 mb-1 font-semibold">SMTP Host</label>
                 <input
                   type="text"
-                  placeholder="smtp.mailtrap.io or smtp.gmail.com"
+                  placeholder="smtp.zoho.in, smtp.gmail.com, etc."
                   value={smtpData.host || ""}
                   onChange={(e) => setSmtpData({ ...smtpData, host: e.target.value })}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-[#121624] border border-[#20273a] text-white"
@@ -1848,22 +1913,48 @@ export default function AdminPortalPage() {
               </div>
 
               <div>
-                <label className="block text-zinc-400 mb-1">SMTP Port</label>
+                <label className="block text-zinc-400 mb-1 font-semibold">SMTP Port</label>
                 <input
                   type="number"
-                  placeholder="587"
-                  value={smtpData.port || 587}
-                  onChange={(e) => setSmtpData({ ...smtpData, port: e.target.value })}
+                  placeholder="465 or 587"
+                  value={smtpData.port ?? 465}
+                  onChange={(e) => {
+                    const p = parseInt(e.target.value, 10) || 587;
+                    setSmtpData({
+                      ...smtpData,
+                      port: p,
+                      secure: p === 465 ? true : (p === 587 ? false : smtpData.secure),
+                    });
+                  }}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-[#121624] border border-[#20273a] text-white"
                 />
               </div>
             </div>
 
+            {/* SSL/TLS Checkbox */}
+            <div className="p-3 rounded-xl bg-[#121624] border border-[#20273a]">
+              <label className="flex items-center gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={Boolean(smtpData.secure ?? (smtpData.port === 465))}
+                  onChange={(e) => setSmtpData({ ...smtpData, secure: e.target.checked })}
+                  className="rounded text-amber-500 focus:ring-0 bg-[#0a0d16] border-[#252e42] w-4 h-4"
+                />
+                <div>
+                  <span className="text-white font-semibold">Use SSL / Direct TLS</span>
+                  <p className="text-[11px] text-zinc-400">
+                    Mandatory for Port 465 (Zoho, Gmail). Uncheck for Port 587 (STARTTLS).
+                  </p>
+                </div>
+              </label>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-zinc-400 mb-1">SMTP Username / API Key</label>
+                <label className="block text-zinc-400 mb-1 font-semibold">SMTP Username / Email</label>
                 <input
                   type="text"
+                  placeholder="e.g. support@yourdomain.com"
                   value={smtpData.username || ""}
                   onChange={(e) => setSmtpData({ ...smtpData, username: e.target.value })}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-[#121624] border border-[#20273a] text-white"
@@ -1871,10 +1962,12 @@ export default function AdminPortalPage() {
               </div>
 
               <div>
-                <label className="block text-zinc-400 mb-1">SMTP Password</label>
+                <label className="block text-zinc-400 mb-1 font-semibold">
+                  SMTP Password <span className="text-zinc-500 font-normal">(or App-specific Password)</span>
+                </label>
                 <input
                   type="password"
-                  placeholder="Keep blank to retain existing password"
+                  placeholder={smtpData.passwordMasked ? `Saved: ${smtpData.passwordMasked} (enter to change)` : "Enter SMTP password"}
                   onChange={(e) => setSmtpData({ ...smtpData, password: e.target.value })}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-[#121624] border border-[#20273a] text-white"
                 />
@@ -1883,9 +1976,10 @@ export default function AdminPortalPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-zinc-400 mb-1">Sender Name</label>
+                <label className="block text-zinc-400 mb-1 font-semibold">Sender Display Name</label>
                 <input
                   type="text"
+                  placeholder="CoinCraft Store"
                   value={smtpData.senderName || ""}
                   onChange={(e) => setSmtpData({ ...smtpData, senderName: e.target.value })}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-[#121624] border border-[#20273a] text-white"
@@ -1893,9 +1987,10 @@ export default function AdminPortalPage() {
               </div>
 
               <div>
-                <label className="block text-zinc-400 mb-1">Sender Email Address</label>
+                <label className="block text-zinc-400 mb-1 font-semibold">Sender Email Address</label>
                 <input
                   type="email"
+                  placeholder="e.g. support@yourdomain.com"
                   value={smtpData.senderEmail || ""}
                   onChange={(e) => setSmtpData({ ...smtpData, senderEmail: e.target.value })}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-[#121624] border border-[#20273a] text-white"
@@ -1903,24 +1998,44 @@ export default function AdminPortalPage() {
               </div>
             </div>
 
-            <div className="flex gap-4 pt-2">
+            <div className="pt-2">
               <button
                 type="submit"
-                className="px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs"
+                className="px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs shadow-lg shadow-amber-500/20"
               >
                 Save SMTP Settings
               </button>
-
-              <button
-                type="button"
-                onClick={handleTestSmtp}
-                className="px-5 py-2.5 rounded-xl bg-[#171d2c] hover:bg-[#20273b] text-zinc-200 border border-[#27324c] font-bold text-xs flex items-center gap-1.5"
-              >
-                <Send className="w-3.5 h-3.5 text-amber-400" />
-                Test SMTP Connection
-              </button>
             </div>
           </form>
+
+          {/* Test SMTP Outgoing Email Section */}
+          <div className="pt-5 border-t border-[#1c2234] space-y-3">
+            <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+              <Send className="w-4 h-4 text-amber-400" />
+              <span>Test SMTP Outgoing Delivery</span>
+            </h4>
+            <p className="text-[11px] text-zinc-400">
+              Send a real test email to verify credentials and ensure messages arrive in your inbox.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 items-center">
+              <input
+                type="email"
+                placeholder="Enter recipient email (e.g. your personal email address)"
+                value={testEmailRecipient}
+                onChange={(e) => setTestEmailRecipient(e.target.value)}
+                className="flex-1 w-full px-3.5 py-2.5 rounded-xl bg-[#121624] border border-[#20273a] text-white text-xs focus:outline-none focus:border-amber-500"
+              />
+              <button
+                type="button"
+                disabled={testingSmtp}
+                onClick={handleTestSmtp}
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[#171d2c] hover:bg-[#20273b] text-zinc-200 border border-[#27324c] font-bold text-xs flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
+              >
+                <Send className={`w-3.5 h-3.5 text-amber-400 ${testingSmtp ? "animate-pulse" : ""}`} />
+                <span>{testingSmtp ? "Sending Test..." : "Send Test Email"}</span>
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
